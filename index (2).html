@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-translate="app_title">نظام احترافي لإدارة المأموريات</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --sidebar-bg: #ffffff;
+            --card-bg: #ffffff;
+            --text-color: #334155;
+            --text-light: #64748b;
+            --border-color: #e2e8f0;
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --secondary-color: #10b981;
+        }
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .tab-active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .fc-event {
+            cursor: pointer;
+        }
+        .fc-daygrid-event {
+            white-space: normal !important;
+            align-items: center;
+        }
+        .modal {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+    <div id="app" class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+        <header class="flex flex-wrap justify-between items-center mb-6 pb-4 border-b border-[--border-color]">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800" data-translate="app_title">نظام احترافي لإدارة المأموريات</h1>
+            <div class="flex items-center space-x-2 rtl:space-x-reverse">
+                <button id="add-mission-btn" class="text-white bg-[--primary-color] hover:bg-[--primary-hover] font-medium rounded-lg text-sm px-5 py-2.5 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+                    <span data-translate="btn_add_mission">إضافة مأمورية</span>
+                </button>
+                <button id="lang-toggle-btn" class="text-sm font-medium py-2 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">English</button>
+            </div>
+        </header>
+        
+        <div class="mb-6 border-b border-gray-200">
+            <nav class="flex -mb-px space-x-2 rtl:space-x-reverse" aria-label="Tabs">
+                <button class="tab-btn whitespace-nowrap py-3 px-4 font-medium text-sm rounded-t-lg tab-active" data-tab="dashboard" data-translate="tab_dashboard">لوحة التحكم</button>
+                <button class="tab-btn whitespace-nowrap py-3 px-4 font-medium text-sm rounded-t-lg" data-tab="reports" data-translate="tab_reports">التقارير</button>
+                <button class="tab-btn whitespace-nowrap py-3 px-4 font-medium text-sm rounded-t-lg" data-tab="entitlements" data-translate="tab_entitlements">الاستحقاقات</button>
+                <button class="tab-btn whitespace-nowrap py-3 px-4 font-medium text-sm rounded-t-lg" data-tab="settings" data-translate="tab_settings">الإعدادات</button>
+            </nav>
+        </div>
+
+        <main>
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="tab-content">
+                <!-- Filters -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 p-4 bg-white rounded-lg shadow-sm border border-[--border-color]">
+                     <div>
+                        <label for="filter-from-date" class="text-sm font-medium" data-translate="filter_from">من تاريخ</label>
+                        <input type="date" id="filter-from-date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div>
+                        <label for="filter-to-date" class="text-sm font-medium" data-translate="filter_to">إلى تاريخ</label>
+                        <input type="date" id="filter-to-date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div>
+                        <label for="filter-location" class="text-sm font-medium" data-translate="filter_location">المكان</label>
+                        <select id="filter-location" class="mt-1 block w-full rounded-md border-gray-300 text-sm"><option value="all">الكل</option></select>
+                    </div>
+                     <div>
+                        <label for="filter-employee" class="text-sm font-medium" data-translate="filter_employee">الموظف</label>
+                        <select id="filter-employee" class="mt-1 block w-full rounded-md border-gray-300 text-sm"><option value="all">الكل</option></select>
+                    </div>
+                </div>
+                <!-- View Toggle & Export -->
+                <div class="flex justify-between items-center mb-4">
+                    <button id="export-dashboard-btn" class="text-white bg-emerald-600 hover:bg-emerald-700 font-medium rounded-lg text-sm px-5 py-2.5 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.905 3.079V2.75z" /><path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" /></svg>
+                        <span data-translate="btn_export_dashboard">تصدير الجدول الحالي</span>
+                    </button>
+                     <div class="inline-flex rounded-md shadow-sm">
+                        <button id="view-table-btn" class="px-4 py-2 text-sm font-medium text-white bg-[--primary-color] border border-gray-200 rounded-s-lg" data-translate="view_table">جدول</button>
+                        <button id="view-calendar-btn" class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border-t border-b border-gray-200 hover:bg-gray-100" data-translate="view_calendar">تقويم</button>
+                    </div>
+                </div>
+                <!-- Table View -->
+                <div id="table-container">
+                    <div class="overflow-x-auto bg-white rounded-lg shadow-sm border border-[--border-color]">
+                        <table class="min-w-full divide-y divide-gray-200">
+                             <thead class="bg-gray-50">
+                                <!-- Headers will be dynamically inserted here by JavaScript -->
+                             </thead>
+                            <tbody id="missions-tbody" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                         <p id="no-missions-msg" class="text-center py-8 text-gray-500 hidden" data-translate="no_missions">لا توجد مأموريات لعرضها.</p>
+                    </div>
+                </div>
+                <!-- Calendar View -->
+                <div id="calendar-container" class="hidden bg-white p-4 rounded-lg shadow-sm border border-[--border-color]">
+                    <div id="calendar"></div>
+                </div>
+            </div>
+
+            <!-- Reports View -->
+            <div id="reports-view" class="tab-content hidden">
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4 bg-white rounded-xl shadow-sm border">
+                    <div>
+                        <label for="report-year" class="text-sm font-medium" data-translate="report_year">السنة</label>
+                        <select id="report-year" class="mt-1 block w-full rounded-md border-gray-300 text-sm"></select>
+                    </div>
+                    <div class="flex items-end col-span-2">
+                        <!-- Filter Summary for Reports -->
+                        <div class="grid grid-cols-2 gap-4 w-full">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500" data-translate="filter_from">من تاريخ (حسب الفلتر)</p>
+                                <p id="summary-from-date-report" class="text-md font-semibold text-gray-800">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-500" data-translate="filter_to">إلى تاريخ (حسب الفلتر)</p>
+                                <p id="summary-to-date-report" class="text-md font-semibold text-gray-800">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border">
+                        <h3 class="text-lg font-semibold" data-translate="report_total_title">إجمالي المأموريات</h3>
+                        <p id="total-missions-report" class="text-3xl font-bold text-[--primary-color] mt-2">0</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border">
+                        <h3 class="text-lg font-semibold" data-translate="report_total_cost_title">إجمالي التكاليف</h3>
+                        <p id="total-costs-report" class="text-3xl font-bold text-[--secondary-color] mt-2">0</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border h-[400px]">
+                        <h3 class="text-lg font-semibold mb-4" data-translate="chart_monthly_title">المأموريات حسب الشهر</h3>
+                        <canvas id="monthly-chart"></canvas>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border h-[400px]">
+                        <h3 class="text-lg font-semibold mb-4" data-translate="chart_location_count_title">عدد المأموريات حسب المكان</h3>
+                         <canvas id="location-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Entitlements View -->
+            <div id="entitlements-view" class="tab-content hidden">
+                 <div class="bg-white p-6 rounded-xl shadow-sm border">
+                    <h3 class="text-lg font-semibold mb-4" data-translate="settings_entitlements_title">الاستحقاقات التي تمت تصفيتها</h3>
+                     <div id="entitlements-content">
+                        <form id="add-entitlement-form" class="grid grid-cols-3 gap-2 mb-4">
+                            <input type="date" id="entitlement-date" class="block w-full rounded-md border-gray-300 text-sm" required>
+                            <input type="number" id="entitlement-amount" class="block w-full rounded-md border-gray-300 text-sm" data-translate="placeholder_amount" placeholder="المبلغ" required>
+                            <button type="submit" class="px-4 py-2 text-sm text-white bg-[--primary-color] rounded-md" data-translate="btn_add">إضافة</button>
+                        </form>
+                        <div class="max-h-96 overflow-y-auto">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th class="px-4 py-2 text-start text-xs font-medium text-gray-500 uppercase" data-translate="table_date">التاريخ</th>
+                                        <th class="px-4 py-2 text-start text-xs font-medium text-gray-500 uppercase" data-translate="table_amount">المبلغ</th>
+                                        <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase" data-translate="table_actions">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="entitlements-tbody" class="divide-y divide-gray-200">
+                                    <!-- Rows will be added here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settings-view" class="tab-content hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Locations -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border">
+                    <h3 class="text-lg font-semibold mb-4" data-translate="settings_locations">الأماكن</h3>
+                    <div id="locations-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto"></div>
+                    <form id="add-location-form" class="flex gap-2">
+                        <input type="text" id="location-name" class="block w-full rounded-md border-gray-300 text-sm" placeholder="أضف مكان جديد..." required>
+                        <button type="submit" class="px-4 py-2 text-sm text-white bg-[--primary-color] rounded-md" data-translate="btn_add">إضافة</button>
+                    </form>
+                </div>
+                <!-- Allowances -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border">
+                    <h3 class="text-lg font-semibold mb-4" data-translate="settings_allowances">البدلات</h3>
+                    <div id="allowances-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto"></div>
+                    <form id="add-allowance-form" class="flex gap-2">
+                        <input type="text" id="allowance-name" class="block w-full rounded-md border-gray-300 text-sm" placeholder="أضف بدل جديد..." required>
+                        <button type="submit" class="px-4 py-2 text-sm text-white bg-[--primary-color] rounded-md" data-translate="btn_add">إضافة</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Mission Modal -->
+    <div id="mission-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50 opacity-0">
+        <div class="modal-content bg-white rounded-xl shadow-2xl w-full max-w-lg transform scale-95">
+             <form id="mission-form" class="p-6">
+                 <h2 id="modal-title" class="text-xl font-semibold mb-6"></h2>
+                 <input type="hidden" id="mission-id">
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="mission-employee" class="block text-sm font-medium" data-translate="form_employee">الموظف</label>
+                        <select id="mission-employee" class="mt-1 block w-full rounded-md border-gray-300 sm:text-sm" required></select>
+                    </div>
+                     <div>
+                        <label for="mission-location" class="block text-sm font-medium" data-translate="form_location">المكان</label>
+                        <select id="mission-location" class="mt-1 block w-full rounded-md border-gray-300 sm:text-sm" required></select>
+                    </div>
+                    <div>
+                        <label for="mission-date" class="block text-sm font-medium" data-translate="form_date">تاريخ البدء</label>
+                        <input type="date" id="mission-date" class="mt-1 block w-full rounded-md border-gray-300 sm:text-sm" required>
+                    </div>
+                    <div>
+                        <label for="days-count" class="block text-sm font-medium" data-translate="form_days">عدد الأيام</label>
+                        <input type="number" id="days-count" min="1" value="1" class="mt-1 block w-full rounded-md border-gray-300 sm:text-sm" required>
+                    </div>
+                    <div class="md:col-span-2 flex items-center pt-2">
+                        <input id="travel-by-car" type="checkbox" class="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500">
+                        <label for="travel-by-car" class="ms-2 text-sm font-medium text-gray-900" data-translate="form_travel_by_car">الانتقال بالسيارة</label>
+                    </div>
+                    <div class="md:col-span-2">
+                         <label for="notes" class="block text-sm font-medium" data-translate="form_notes">ملاحظات</label>
+                         <textarea id="notes" rows="2" class="mt-1 block w-full rounded-md border-gray-300 sm:text-sm"></textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <h3 class="text-md font-semibold border-t pt-4 mt-2" data-translate="form_costs">التكاليف والبدلات</h3>
+                        <div id="costs-container" class="grid grid-cols-2 gap-4 mt-2"></div>
+                    </div>
+                 </div>
+                 <div class="flex items-center justify-end space-x-2 rtl:space-x-reverse pt-6 mt-4 border-t">
+                    <button type="button" id="cancel-btn" class="text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 font-medium rounded-lg text-sm px-5 py-2.5" data-translate="btn_cancel">إلغاء</button>
+                    <button type="submit" id="submit-btn" class="text-white bg-[--primary-color] hover:bg-[--primary-hover] font-medium rounded-lg text-sm px-5 py-2.5"></button>
+                 </div>
+             </form>
+        </div>
+    </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- STATE MANAGEMENT ---
+        let missions = [];
+        let employees = [];
+        let locations = [];
+        let allowances = [];
+        let entitlements = {};
+        const carAllowances = ['بنزين', 'كارته عربية'];
+        let currentLang = 'ar';
+        let monthlyChartInstance = null;
+        let locationChartInstance = null;
+        let calendar;
+        let dateSortOrder = 'asc'; // 'asc' for oldest first, 'desc' for newest first
+
+        // --- TRANSLATIONS ---
+        const translations = {
+            ar: {
+                app_title: "نظام احترافي لإدارة المأموريات",
+                btn_add_mission: "إضافة مأمورية",
+                tab_dashboard: "لوحة التحكم",
+                tab_reports: "التقارير",
+                tab_settings: "الإعدادات",
+                tab_entitlements: "الاستحقاقات",
+                filter_from: "من تاريخ",
+                filter_to: "إلى تاريخ",
+                filter_location: "المكان",
+                filter_employee: "الموظف",
+                filter_all: "الكل",
+                view_table: "جدول",
+                view_calendar: "تقويم",
+                table_employee: "الموظف",
+                table_start_date: "تاريخ البدء",
+                table_end_date: "تاريخ الانتهاء",
+                table_days: "الأيام",
+                table_location: "المكان",
+                table_notes: "الملاحظات",
+                table_cost: "التكلفة الإجمالية",
+                table_actions: "إجراءات",
+                table_date: "التاريخ",
+                table_amount: "المبلغ",
+                no_missions: "لا توجد مأموريات لعرضها.",
+                report_year: "السنة",
+                btn_export_dashboard: "تصدير الجدول الحالي",
+                report_total_title: "إجمالي المأموريات",
+                report_total_cost_title: "إجمالي التكاليف",
+                chart_monthly_title: "المأموريات حسب الشهر",
+                chart_location_count_title: "عدد المأموريات حسب المكان",
+                settings_locations: "الأماكن",
+                settings_allowances: "البدلات",
+                settings_entitlements_title: "الاستحقاقات التي تمت تصفيتها",
+                placeholder_amount: "المبلغ",
+                btn_add: "إضافة",
+                btn_update: "تحديث",
+                btn_cancel: "إلغاء",
+                form_title_add: "إضافة مأمورية جديدة",
+                form_title_edit: "تعديل المأمورية",
+                form_employee: "الموظف",
+                form_location: "المكان",
+                form_date: "تاريخ البدء",
+                form_days: "عدد الأيام",
+                form_notes: "ملاحظات",
+                form_costs: "التكاليف والبدلات",
+                form_travel_by_car: "الانتقال بالسيارة",
+                delete_confirm: "هل أنت متأكد من الحذف؟"
+            },
+            en: {
+                app_title: "Professional Mission Management System",
+                btn_add_mission: "Add Mission",
+                tab_dashboard: "Dashboard",
+                tab_reports: "Reports",
+                tab_settings: "Settings",
+                tab_entitlements: "Entitlements",
+                filter_from: "From Date",
+                filter_to: "To Date",
+                filter_location: "Location",
+                filter_employee: "Employee",
+                filter_all: "All",
+                view_table: "Table",
+                view_calendar: "Calendar",
+                table_employee: "Employee",
+                table_start_date: "Start Date",
+                table_end_date: "End Date",
+                table_days: "Days",
+                table_location: "Location",
+                table_notes: "Notes",
+                table_cost: "Total Cost",
+                table_actions: "Actions",
+                table_date: "Date",
+                table_amount: "Amount",
+                no_missions: "No missions to display.",
+                report_year: "Year",
+                btn_export_dashboard: "Export Current Table",
+                report_total_title: "Total Missions",
+                report_total_cost_title: "Total Costs",
+                chart_monthly_title: "Missions by Month",
+                chart_location_count_title: "Missions Count by Location",
+                settings_locations: "Locations",
+                settings_allowances: "Allowances",
+                settings_entitlements_title: "Filtered Entitlements",
+                placeholder_amount: "Amount",
+                btn_add: "Add",
+                btn_update: "Update",
+                btn_cancel: "Cancel",
+                form_title_add: "Add New Mission",
+                form_title_edit: "Edit Mission",
+                form_employee: "Employee",
+                form_location: "Location",
+                form_date: "Start Date",
+                form_days: "Days Count",
+                form_notes: "Notes",
+                form_costs: "Costs & Allowances",
+                form_travel_by_car: "Travel by Car",
+                delete_confirm: "Are you sure you want to delete?"
+            }
+        };
+
+        // --- DOM ELEMENTS ---
+        const langToggleBtn = document.getElementById('lang-toggle-btn');
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const missionModal = document.getElementById('mission-modal');
+        const missionForm = document.getElementById('mission-form');
+        const addMissionBtn = document.getElementById('add-mission-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+
+        // --- UTILITY FUNCTIONS ---
+        const saveState = () => {
+            localStorage.setItem('missions_pro', JSON.stringify(missions));
+            localStorage.setItem('locations_pro', JSON.stringify(locations));
+            localStorage.setItem('allowances_pro', JSON.stringify(allowances));
+            localStorage.setItem('entitlements_pro', JSON.stringify(entitlements));
+        };
+
+        const loadState = () => {
+            employees = ['مونيكا ريمون'];
+            const storedMissionsJSON = localStorage.getItem('missions_pro');
+            const storedMissions = storedMissionsJSON ? JSON.parse(storedMissionsJSON) : null;
+            
+            if (storedMissions && localStorage.getItem('entitlements_pro')) {
+                missions = storedMissions.filter(m => m.employee === 'مونيكا ريمون');
+                locations = JSON.parse(localStorage.getItem('locations_pro'));
+                allowances = JSON.parse(localStorage.getItem('allowances_pro'));
+                entitlements = JSON.parse(localStorage.getItem('entitlements_pro'));
+                 if(!entitlements['مونيكا ريمون']){
+                    entitlements = {'مونيكا ريمون': []}
+                }
+            } else {
+                locations = ['بورسعيد', 'الوادي الجديد', 'الغردقة'];
+                allowances = ['ذهاب', 'عودة', 'مواصلات'];
+
+                missions = [
+                    { id: 14, employee: 'مونيكا ريمون', location: 'بورسعيد', date: '2025-08-06', days: 2, notes: '', costs: { 'ذهاب': 180, 'عودة': 240, 'مواصلات': 0 }, travelByCar: false },
+                    { id: 15, employee: 'مونيكا ريمون', location: 'بورسعيد', date: '2025-07-23', days: 1, notes: '', costs: { 'ذهاب': 180, 'عودة': 200, 'مواصلات': 0 }, travelByCar: false },
+                    { id: 16, employee: 'مونيكا ريمون', location: 'بورسعيد', date: '2025-07-15', days: 3, notes: '', costs: { 'ذهاب': 180, 'عودة': 200, 'مواصلات': 0 }, travelByCar: false },
+                    { id: 17, employee: 'مونيكا ريمون', location: 'بورسعيد', date: '2025-07-08', days: 3, notes: '', costs: { 'ذهاب': 180, 'عودة': 240, 'مواصلات': 0 }, travelByCar: false },
+                    { id: 18, employee: 'مونيكا ريمون', location: 'بورسعيد', date: '2025-06-30', days: 3, notes: '', costs: { 'ذهاب': 180, 'عودة': 240, 'مواصلات': 0 }, travelByCar: false },
+                    { id: 19, employee: 'مونيكا ريمون', location: 'بورسعيد', date: '2025-06-22', days: 4, notes: '', costs: { 'ذهاب': 180, 'عودة': 240, 'مواصلات': 0 }, travelByCar: false },
+                    { id: 20, employee: 'مونيكا ريمون', location: 'بورسعيد', date: '2025-06-01', days: 4, notes: '', costs: { 'ذهاب': 180, 'عودة': 240, 'مواصلات': 0 }, travelByCar: false },
+                    { id: 21, employee: 'مونيكا ريمون', location: 'بورسعيد', date: '2025-05-26', days: 1, notes: '', costs: { 'ذهاب': 180, 'عودة': 240, 'مواصلات': 60 }, travelByCar: false },
+                    { id: 22, employee: 'مونيكا ريمون', location: 'بورسعيد', date: '2025-05-21', days: 1, notes: 'أمر 200 ج بموافقة دكتور محمد', costs: { 'ذهاب': 235, 'عودة': 200, 'مواصلات': 260 }, travelByCar: false },
+                    { id: 23, employee: 'مونيكا ريمون', location: 'بورسعيد', date: '2025-05-08', days: 1, notes: '', costs: { 'ذهاب': 180, 'عودة': 240, 'مواصلات': 60 }, travelByCar: false },
+                    { id: 24, employee: 'مونيكا ريمون', location: 'الوادي الجديد', date: '2025-08-31', days: 1, notes: '', costs: { 'ذهاب': 0, 'عودة': 200, 'مواصلات': 0 }, travelByCar: false },
+                    { id: 25, employee: 'مونيكا ريمون', location: 'الوادي الجديد', date: '2025-06-11', days: 9, notes: '', costs: { 'ذهاب': 90, 'عودة': 200, 'مواصلات': 0 }, travelByCar: false },
+                    { id: 26, employee: 'مونيكا ريمون', location: 'الغردقة', date: '2025-08-25', days: 5, notes: '', costs: { 'ذهاب': 0, 'عودة': 0, 'مواصلات': 0 }, travelByCar: false },
+                ];
+
+                entitlements = {
+                    'مونيكا ريمون': [
+                        { date: '2025-05-26', amount: 5000 }, { date: '2025-06-18', amount: 5000 },
+                        { date: '2025-06-22', amount: 5460 }, { date: '2025-06-29', amount: 1700 },
+                        { date: '2025-06-30', amount: 2000 }, { date: '2025-07-17', amount: 1000 },
+                        { date: '2025-07-23', amount: 500 },
+                    ]
+                };
+                
+                saveState();
+            }
+        };
+
+        const updateUIBasedOnLanguage = () => {
+            const lang = currentLang;
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            langToggleBtn.textContent = lang === 'ar' ? 'English' : 'العربية';
+
+            document.querySelectorAll('[data-translate]').forEach(el => {
+                const key = el.dataset.translate;
+                if (translations[lang][key]) {
+                    if (el.tagName === 'INPUT' && el.type === 'number') {
+                        el.placeholder = translations[lang][key];
+                    } else if (el.tagName === 'INPUT') {
+                         el.placeholder = translations[lang][key];
+                    }
+                    else {
+                        el.textContent = translations[lang][key];
+                    }
+                }
+            });
+            renderAll();
+        };
+
+        const renderAll = () => {
+            populateFilters();
+            renderDashboard();
+            updateReportView();
+            renderSettings();
+            renderEntitlementsTable();
+        };
+        
+        // --- MODAL HANDLING ---
+        const openModal = (missionId = null) => {
+            missionForm.reset();
+            document.getElementById('travel-by-car').checked = false;
+            populateModalDropdowns();
+            
+            const modalTitle = document.getElementById('modal-title');
+            const submitBtn = document.getElementById('submit-btn');
+            document.getElementById('mission-id').value = '';
+
+            if (missionId) {
+                const mission = missions.find(m => m.id === missionId);
+                modalTitle.textContent = translations[currentLang].form_title_edit;
+                submitBtn.textContent = translations[currentLang].btn_update;
+                document.getElementById('mission-id').value = mission.id;
+                document.getElementById('mission-employee').value = mission.employee;
+                document.getElementById('mission-location').value = mission.location;
+                document.getElementById('mission-date').value = mission.date;
+                document.getElementById('days-count').value = mission.days;
+                document.getElementById('notes').value = mission.notes;
+                document.getElementById('travel-by-car').checked = mission.travelByCar || false;
+            } else {
+                modalTitle.textContent = translations[currentLang].form_title_add;
+                submitBtn.textContent = translations[currentLang].btn_add;
+                document.getElementById('mission-date').value = new Date().toISOString().split('T')[0];
+            }
+
+            generateCostsInputs(); 
+
+            if (missionId) {
+                const mission = missions.find(m => m.id === missionId);
+                Object.keys(mission.costs).forEach(allowanceName => {
+                    const costInput = document.querySelector(`input[data-allowance='${allowanceName}']`);
+                    if (costInput) costInput.value = mission.costs[allowanceName];
+                });
+            }
+
+            missionModal.classList.remove('hidden');
+            setTimeout(() => {
+                missionModal.querySelector('.modal-content').classList.remove('scale-95');
+                missionModal.classList.remove('opacity-0');
+            }, 10);
+        };
+        
+        const closeModal = () => {
+             missionModal.querySelector('.modal-content').classList.add('scale-95');
+             missionModal.classList.add('opacity-0');
+             setTimeout(() => missionModal.classList.add('hidden'), 300);
+        };
+
+        const populateModalDropdowns = () => {
+            const employeeSelect = document.getElementById('mission-employee');
+            const locationSelect = document.getElementById('mission-location');
+            employeeSelect.innerHTML = employees.map(e => `<option value="${e}">${e}</option>`).join('');
+            locationSelect.innerHTML = locations.map(l => `<option value="${l}">${l}</option>`).join('');
+        };
+
+        const generateCostsInputs = () => {
+            const container = document.getElementById('costs-container');
+            const isByCar = document.getElementById('travel-by-car').checked;
+            const currentAllowances = isByCar ? carAllowances : allowances;
+            
+            container.innerHTML = currentAllowances.map(allowance => `
+                <div>
+                    <label class="block text-sm font-medium text-gray-500">${allowance}</label>
+                    <input type="number" data-allowance="${allowance}" class="mt-1 block w-full rounded-md border-gray-300 sm:text-sm" min="0" value="0">
+                </div>
+            `).join('');
+        };
+        
+        const handleMissionFormSubmit = (e) => {
+            e.preventDefault();
+            const id = parseInt(document.getElementById('mission-id').value);
+            const costs = {};
+            document.querySelectorAll('#costs-container input').forEach(input => {
+                costs[input.dataset.allowance] = parseFloat(input.value) || 0;
+            });
+            
+            const isByCar = document.getElementById('travel-by-car').checked;
+
+            const missionData = {
+                employee: document.getElementById('mission-employee').value,
+                location: document.getElementById('mission-location').value,
+                date: document.getElementById('mission-date').value,
+                days: parseInt(document.getElementById('days-count').value),
+                notes: document.getElementById('notes').value,
+                costs: costs,
+                travelByCar: isByCar
+            };
+
+            if (id) {
+                const index = missions.findIndex(m => m.id === id);
+                missions[index] = { ...missions[index], ...missionData };
+            } else {
+                missionData.id = missions.length > 0 ? Math.max(...missions.map(m => m.id)) + 1 : 1;
+                missions.push(missionData);
+            }
+            saveState();
+            renderDashboard();
+            closeModal();
+        };
+
+        // --- DASHBOARD ---
+        const renderDashboard = () => {
+            const filteredMissions = getFilteredMissions();
+            renderTable(filteredMissions);
+            renderCalendar(filteredMissions);
+            updateReportSummary();
+        };
+
+        const getFilteredMissions = () => {
+            const from = document.getElementById('filter-from-date').value;
+            const to = document.getElementById('filter-to-date').value;
+            const loc = document.getElementById('filter-location').value;
+            const emp = document.getElementById('filter-employee').value;
+
+            return missions.filter(m => {
+                const dateMatch = (!from || m.date >= from) && (!to || m.date <= to);
+                const locMatch = loc === 'all' || m.location === loc;
+                const empMatch = emp === 'all' || m.employee === emp;
+                return dateMatch && locMatch && empMatch;
+            });
+        };
+        
+        const calculateTotalCost = (mission) => {
+             return Object.values(mission.costs).reduce((sum, cost) => sum + cost, 0);
+        };
+        
+        const getEndDate = (startDate, days) => {
+            const date = new Date(startDate);
+            date.setDate(date.getDate() + days - 1);
+            return date.toISOString().split('T')[0];
+        };
+
+        const renderTable = (data) => {
+            const table = document.querySelector("#table-container table");
+            const thead = table.querySelector('thead');
+            const tbody = table.querySelector('tbody');
+            const noMissionsMsg = document.getElementById('no-missions-msg');
+            
+            data.sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                return dateSortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+            });
+
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                 noMissionsMsg.classList.remove('hidden');
+                 table.classList.add('hidden');
+                 return;
+            }
+            noMissionsMsg.classList.add('hidden');
+            table.classList.remove('hidden');
+
+            const allCostTypes = [...new Set(data.flatMap(m => Object.keys(m.costs)))];
+
+            const headerRow = document.createElement('tr');
+            const staticHeaders = ['table_employee', 'table_start_date', 'table_end_date', 'table_days', 'table_location'];
+            
+            let headersHtml = staticHeaders.map(key => {
+                 if (key === 'table_start_date') {
+                    const sortIcon = dateSortOrder === 'asc' ? '↑' : '↓';
+                    return `<th class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">
+                                <button id="sort-date-btn" class="flex items-center gap-1 hover:text-gray-700">
+                                    ${translations[currentLang][key]}
+                                    <span>${sortIcon}</span>
+                                </button>
+                            </th>`;
+                }
+                return `<th class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">${translations[currentLang][key]}</th>`;
+            }).join('');
+
+            headersHtml += allCostTypes.map(costType => `
+                <th class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">${costType}</th>
+            `).join('');
+
+            headersHtml += `
+                <th class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">${translations[currentLang].table_cost}</th>
+                <th class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">${translations[currentLang].table_notes}</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">${translations[currentLang].table_actions}</th>
+            `;
+            headerRow.innerHTML = headersHtml;
+            thead.appendChild(headerRow);
+            
+            document.getElementById('sort-date-btn').addEventListener('click', () => {
+                dateSortOrder = dateSortOrder === 'asc' ? 'desc' : 'asc';
+                renderDashboard(); 
+            });
+
+            data.forEach(mission => {
+                const totalCost = calculateTotalCost(mission);
+                const endDate = getEndDate(mission.date, mission.days);
+                const tr = document.createElement('tr');
+
+                let rowHtml = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${mission.employee}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${mission.date}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${endDate}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${mission.days}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${mission.location}</td>
+                `;
+
+                rowHtml += allCostTypes.map(costType => `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${mission.costs[costType] || 0}</td>
+                `).join('');
+                
+                rowHtml += `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold">${totalCost.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${mission.notes || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm space-x-2 rtl:space-x-reverse">
+                        <button onclick="handleEdit(${mission.id})" class="text-indigo-600 hover:text-indigo-900">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
+                        </button>
+                        <button onclick="handleDelete(${mission.id})" class="text-red-600 hover:text-red-900">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                        </button>
+                    </td>
+                `;
+                tr.innerHTML = rowHtml;
+                tbody.appendChild(tr);
+            });
+        };
+        
+        window.handleEdit = (id) => openModal(id);
+        window.handleDelete = (id) => {
+            if (confirm(translations[currentLang].delete_confirm)) {
+                missions = missions.filter(m => m.id !== id);
+                saveState();
+                renderDashboard();
+                updateReportView();
+            }
+        };
+
+        const renderCalendar = (data) => {
+            const calendarEl = document.getElementById('calendar');
+            const events = data.map(mission => {
+                const endDate = new Date(mission.date);
+                endDate.setDate(endDate.getDate() + mission.days);
+                return {
+                    id: mission.id,
+                    title: `${mission.employee} - ${mission.location}`,
+                    start: mission.date,
+                    end: endDate.toISOString().split('T')[0],
+                    allDay: true
+                };
+            });
+
+            if(calendar) {
+                 calendar.destroy();
+            }
+            
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,listWeek'
+                },
+                initialView: 'dayGridMonth',
+                events: events,
+                locale: currentLang,
+                eventClick: (info) => {
+                    openModal(parseInt(info.event.id));
+                }
+            });
+            calendar.render();
+        };
+
+        const populateFilters = () => {
+            const locFilter = document.getElementById('filter-location');
+            const empFilter = document.getElementById('filter-employee');
+            locFilter.innerHTML = `<option value="all">${translations[currentLang].filter_all}</option>` + [...new Set(missions.map(m => m.location))].map(l => `<option value="${l}">${l}</option>`).join('');
+            empFilter.innerHTML = `<option value="all">${translations[currentLang].filter_all}</option>` + employees.map(e => `<option value="${e}">${e}</option>`).join('');
+        };
+
+        // --- REPORTS ---
+        const updateReportSummary = () => {
+            const fromDate = document.getElementById('filter-from-date').value;
+            const toDate = document.getElementById('filter-to-date').value;
+            document.getElementById('summary-from-date-report').textContent = fromDate || '-';
+            document.getElementById('summary-to-date-report').textContent = toDate || '-';
+        };
+
+        const updateReportView = () => {
+            populateReportFilters();
+            updateReportSummary();
+            const year = document.getElementById('report-year').value;
+            if (!year) return; 
+            const filteredMissions = missions.filter(m => new Date(m.date).getFullYear() == year);
+            
+            const totalCost = filteredMissions.reduce((sum, m) => sum + calculateTotalCost(m), 0);
+            
+            document.getElementById('total-missions-report').textContent = filteredMissions.length;
+            document.getElementById('total-costs-report').textContent = totalCost.toLocaleString();
+
+            const monthlyData = Array(12).fill(0);
+            filteredMissions.forEach(m => { monthlyData[new Date(m.date).getMonth()]++; });
+            
+            const locationCounts = {};
+            filteredMissions.forEach(m => {
+                locationCounts[m.location] = (locationCounts[m.location] || 0) + 1;
+            });
+
+            updateMonthlyChart(monthlyData);
+            updateLocationChart(locationCounts);
+        };
+        
+        const populateReportFilters = () => {
+             const reportYearSelect = document.getElementById('report-year');
+             const years = [...new Set(missions.map(m => new Date(m.date).getFullYear()))].sort((a,b) => b-a);
+             if (years.length === 0) years.push(new Date().getFullYear());
+             reportYearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+        };
+        
+        const updateMonthlyChart = (data) => {
+            const ctx = document.getElementById('monthly-chart').getContext('2d');
+            if (monthlyChartInstance) monthlyChartInstance.destroy();
+            monthlyChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: currentLang === 'ar' ? ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'] : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{ data, backgroundColor: '#4f46e5' }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        };
+
+        const updateLocationChart = (data) => {
+            const ctx = document.getElementById('location-chart').getContext('2d');
+            if (locationChartInstance) locationChartInstance.destroy();
+            locationChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{ data: Object.values(data), backgroundColor: ['#4f46e5', '#10b981', '#f97316', '#8b5cf6', '#ec4899'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        };
+
+        // --- SETTINGS & ENTITLEMENTS ---
+        const renderSettings = () => {
+            renderSettingsList('locations', [...new Set(missions.map(m => m.location))], document.getElementById('locations-list'));
+            renderSettingsList('allowances', allowances, document.getElementById('allowances-list'));
+        };
+        
+        const renderEntitlementsTable = () => {
+            const selectedEmployee = document.getElementById('filter-employee').value;
+            const contentEl = document.getElementById('entitlements-content');
+            
+            // In a single-employee setup, always show the table
+            contentEl.classList.remove('hidden');
+            if(document.getElementById('entitlement-select-msg')){
+                document.getElementById('entitlement-select-msg').classList.add('hidden');
+            }
+            
+            const tbody = document.getElementById('entitlements-tbody');
+            tbody.innerHTML = '';
+            const employeeEntitlements = entitlements[employees[0]] || []; // Always get the first (only) employee
+            
+            employeeEntitlements.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-2 text-sm">${item.date}</td>
+                    <td class="px-4 py-2 text-sm">${item.amount.toLocaleString()}</td>
+                    <td class="px-4 py-2 text-center">
+                        <button onclick="deleteEntitlementItem(${index})" class="text-red-500 hover:text-red-700 font-bold text-lg">&times;</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.deleteEntitlementItem = (index) => {
+            const selectedEmployee = employees[0]; // Always the first (only) employee
+            if (!confirm(translations[currentLang].delete_confirm)) return;
+            
+            entitlements[selectedEmployee].splice(index, 1);
+            saveState();
+            renderEntitlementsTable();
+        };
+
+        const renderSettingsList = (type, data, container) => {
+            container.innerHTML = data.map((item, index) => `
+                <div class="flex justify-between items-center bg-gray-50 p-2 rounded-md">
+                    <span>${item}</span>
+                     ${type === 'allowances' ? `<button onclick="deleteSettingItem('${type}', ${index})" class="text-red-500 hover:text-red-700 font-bold text-xl">&times;</button>` : ''}
+                </div>
+            `).join('');
+        };
+        
+        window.deleteSettingItem = (type, index) => {
+             if (!confirm(translations[currentLang].delete_confirm)) return;
+             if (type === 'allowances') {
+                allowances.splice(index, 1);
+             }
+             saveState();
+             renderAll();
+        };
+        
+        const handleAddSettingItem = (type, inputId) => {
+            const input = document.getElementById(inputId);
+            const value = input.value.trim();
+            if (!value) return;
+            
+            if (type === 'locations' && !locations.includes(value)) {
+                locations.push(value);
+            } else if (type === 'allowances' && !allowances.includes(value)) {
+                allowances.push(value);
+            }
+            
+            input.value = '';
+            saveState();
+            renderAll();
+        };
+
+        // --- EVENT LISTENERS ---
+        langToggleBtn.addEventListener('click', () => {
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            updateUIBasedOnLanguage();
+        });
+        
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => b.classList.remove('tab-active'));
+                btn.classList.add('tab-active');
+                tabContents.forEach(c => c.classList.add('hidden'));
+                document.getElementById(`${btn.dataset.tab}-view`).classList.remove('hidden');
+                if (btn.dataset.tab === 'dashboard' && calendar) calendar.render(); 
+                if (btn.dataset.tab === 'reports') updateReportView();
+                if (btn.dataset.tab === 'entitlements') renderEntitlementsTable();
+            });
+        });
+        
+        addMissionBtn.addEventListener('click', () => openModal());
+        cancelBtn.addEventListener('click', closeModal);
+        missionForm.addEventListener('submit', handleMissionFormSubmit);
+        document.getElementById('travel-by-car').addEventListener('change', generateCostsInputs);
+
+
+        ['filter-from-date', 'filter-to-date', 'filter-location', 'filter-employee'].forEach(id => {
+            document.getElementById(id).addEventListener('change', renderDashboard);
+        });
+        
+        document.getElementById('view-table-btn').addEventListener('click', () => {
+            document.getElementById('table-container').classList.remove('hidden');
+            document.getElementById('calendar-container').classList.add('hidden');
+            document.getElementById('view-table-btn').classList.add('bg-[--primary-color]', 'text-white');
+            document.getElementById('view-calendar-btn').classList.remove('bg-[--primary-color]', 'text-white');
+        });
+        document.getElementById('view-calendar-btn').addEventListener('click', () => {
+            document.getElementById('calendar-container').classList.remove('hidden');
+            document.getElementById('table-container').classList.add('hidden');
+            document.getElementById('view-calendar-btn').classList.add('bg-[--primary-color]', 'text-white');
+            document.getElementById('view-table-btn').classList.remove('bg-[--primary-color]', 'text-white');
+            if (calendar) calendar.render();
+        });
+
+        document.getElementById('report-year').addEventListener('change', updateReportView);
+        
+        document.getElementById('add-location-form').addEventListener('submit', (e) => { e.preventDefault(); /* Adding locations is disabled */ });
+        document.getElementById('add-allowance-form').addEventListener('submit', (e) => { e.preventDefault(); handleAddSettingItem('allowances', 'allowance-name'); });
+        
+        document.getElementById('add-entitlement-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const selectedEmployee = employees[0]; // Always the first (only) employee
+            
+            const dateInput = document.getElementById('entitlement-date');
+            const amountInput = document.getElementById('entitlement-amount');
+            const date = dateInput.value;
+            const amount = parseFloat(amountInput.value);
+
+            if (date && !isNaN(amount) && amount > 0) {
+                if (!entitlements[selectedEmployee]) {
+                    entitlements[selectedEmployee] = [];
+                }
+                entitlements[selectedEmployee].push({ date, amount });
+                entitlements[selectedEmployee].sort((a, b) => new Date(b.date) - new Date(a.date));
+                saveState();
+                renderEntitlementsTable();
+                e.target.reset();
+            }
+        });
+
+        document.getElementById('export-dashboard-btn').addEventListener('click', () => {
+            const data = getFilteredMissions();
+             if (data.length === 0) return;
+             
+             const allCostTypes = [...new Set(data.flatMap(m => Object.keys(m.costs)))];
+             let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+             const headers = [
+                translations[currentLang].table_employee,
+                translations[currentLang].table_start_date,
+                translations[currentLang].table_end_date,
+                translations[currentLang].table_days,
+                translations[currentLang].table_location,
+                ...allCostTypes,
+                translations[currentLang].table_cost,
+                translations[currentLang].table_notes
+             ].join(',');
+             csvContent += headers + "\r\n";
+
+             data.forEach(m => {
+                const totalCost = calculateTotalCost(m);
+                const endDate = getEndDate(m.date, m.days);
+                const allowanceValues = allCostTypes.map(a => m.costs[a] || 0);
+                const notes = `"${(m.notes || '').replace(/"/g, '""')}"`;
+                const row = [m.employee, m.date, endDate, m.days, m.location, ...allowanceValues, totalCost, notes].join(',');
+                csvContent += row + "\r\n";
+             });
+
+             const encodedUri = encodeURI(csvContent);
+             const link = document.createElement("a");
+             link.setAttribute("href", encodedUri);
+             link.setAttribute("download", "missions_report.csv");
+             document.body.appendChild(link);
+             link.click();
+             document.body.removeChild(link);
+        });
+
+        // --- INITIALIZATION ---
+        const init = () => {
+            loadState();
+            updateUIBasedOnLanguage();
+        };
+
+        init();
+    });
+    </script>
+</body>
+</html>
+
